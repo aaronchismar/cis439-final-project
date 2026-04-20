@@ -1,8 +1,8 @@
 # CIS 439 Final Project: Query Expansion with Pseudo-Relevance Feedback
 
 A BM25 retrieval system over the wiki2022 corpus, extended with pseudo-relevance
-feedback (PRF) for automatic query expansion. Built for CIS 439/536 at the
-University of Michigan - Dearborn.
+feedback (PRF) for automatic query expansion.
+
 
 **Team:** Aaron Chismar, Shannon A. Mendonca
 
