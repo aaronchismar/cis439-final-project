@@ -1,93 +1,120 @@
 # CIS 439 Final Project: Query Expansion with Pseudo-Relevance Feedback
 
 A BM25 retrieval system over the wiki2022 corpus, extended with pseudo-relevance
-feedback (PRF) for automatic query expansion.
-
+feedback (PRF) for automatic query expansion. Built for CIS 439/536.
 
 **Team:** Aaron Chismar, Shannon A. Mendonca
-
-## Overview
-
-This project implements a full information retrieval pipeline and measures
-whether PRF meaningfully improves retrieval quality over a BM25 baseline.
-It builds directly on the preprocessing pipeline from Checkpoint #1 (tokenizer,
-Porter stemmer) and the inverted index from Checkpoint #2.
-
-## Project Structure
-
-```
-cis439-final-project/
-├── src/            # Core source code (preprocessing, indexing, ranking, PRF, eval)
-├── scripts/        # One-off utilities (index merging, doc length computation)
-├── data/           # Query set, information needs, relevance judgments (qrels)
-├── results/        # Ranked run outputs in TREC format
-├── docs/           # Proposal, design notes, meeting notes
-└── requirements.txt
-```
-
-The wiki2022 corpus itself is NOT tracked in git (too large). Place the
-unzipped corpus in a `wiki2022/` folder at the repo root; it will be gitignored.
 
 ## Setup
 
 Requires Python 3.9+ on macOS or Linux.
 
 ```bash
-# Clone the repo
-git clone <repo-url>
+git clone https://github.com/aaronchismar/cis439-final-project.git
 cd cis439-final-project
-
-# Install dependencies
 pip3 install -r requirements.txt
-
-# Place the wiki2022 dataset at ./wiki2022/ (not included in repo)
 ```
 
-## Usage
+Place the wiki2022 dataset folder (containing `wiki2022_small.000000` through
+`wiki2022_small.000031`) at a known path. The examples below assume it is at
+`../439_Checkpoint2/wiki2022` relative to the project root.
 
-TBD as components come online. Rough plan:
+## Reproducing Results
+
+### Step 1: Build the index
 
 ```bash
-# Build the inverted index with document length stats
-python3 -m src.indexer ./wiki2022
-
-# Run a BM25 query
-python3 -m src.search "heart attack symptoms"
-
-# Run full evaluation over the query set
-python3 -m src.evaluate --method bm25
-python3 -m src.evaluate --method bm25_prf
+python3 -m src.indexer ../439_Checkpoint2/wiki2022
 ```
 
-## Components
+This produces `dictionary.txt`, `global_index.txt`, `doc_lengths.json`, and
+32 per-chunk index files in the current directory. Takes a few minutes.
 
-| File | Purpose |
-|------|---------|
-| `src/preprocessing.py` | Tokenization, stopword removal, Porter stemming (from Ckpt 1) |
-| `src/indexer.py` | Inverted index with document length stats (extends Ckpt 2) |
-| `src/bm25.py` | BM25 ranking function with tunable k1 and b |
-| `src/prf.py` | Pseudo-relevance feedback: term scoring and query expansion |
-| `src/evaluate.py` | Precision@k, MAP, nDCG computation |
-| `src/search.py` | Main query interface |
+### Step 2: Verify BM25 works
 
-## Evaluation
+```bash
+python3 -m src.bm25 "heart attack symptoms"
+```
 
-We author our own query set and relevance judgments since Wikipedia does not
-come with pre-built qrels. See `data/information_needs.md` for methodology.
+Should return 10 ranked documents with scores.
 
-- `data/queries.tsv` - 20 queries in TSV format
-- `data/information_needs.md` - human-readable need descriptions
-- `data/qrels.txt` - relevance judgments in TREC qrels format
+### Step 3: Verify PRF works
 
-## Development Conventions
+```bash
+python3 -m src.prf "heart attack symptoms"
+```
 
-- Python 3, hash-style comments, empty lines as separators (no `# ---` dividers)
-- Pre-approved libraries only: `nltk`, `numpy`, `pandas`
-- BM25 scoring, index logic, and PRF implemented from scratch
-- Commits should be small and focused; one logical change per commit
-- Branch off `main` for non-trivial work, open a PR for review before merging
+Shows initial BM25 results, expansion terms, expanded query, and re-ranked results.
 
-## References
+### Step 4: Run the full evaluation (BM25 vs BM25+PRF)
 
-- Proposal: `docs/proposal.pdf`
-- Design notes and TODOs: `docs/notes.md`
+```bash
+python3 -m src.evaluate --queries data/queries.tsv --qrels data/qrels.txt
+```
+
+Prints per-query P@k, MAP, nDCG@k for both methods with deltas, plus macro averages.
+
+### Step 5: Run the parameter sweep
+
+```bash
+python3 -m scripts.param_sweep data/queries.tsv data/qrels.txt
+```
+
+Tests 25 (k, m) configurations and reports the best PRF setting.
+
+### Step 6: Compute inter-annotator agreement
+
+```bash
+python3 scripts/compute_kappa.py data/aaron_overlap.txt data/shannon_overlap.txt
+```
+
+Reports Cohen's kappa with confusion matrix and per-query agreement.
+
+## Project Structure
+
+```
+cis439-final-project/
+├── src/
+│   ├── preprocessing.py   # Tokenizer, stemmer, stopwords (from Checkpoint 1)
+│   ├── indexer.py          # Inverted index + doc lengths + merge (extends Checkpoint 2)
+│   ├── bm25.py             # BM25 ranking
+│   ├── prf.py              # Pseudo-relevance feedback
+│   └── evaluate.py         # P@k, MAP, nDCG evaluation harness
+├── scripts/
+│   ├── compute_kappa.py    # Cohen's kappa on overlap judgments
+│   ├── param_sweep.py      # PRF parameter grid search
+│   └── preview_docs.py     # Preview article text for judging
+├── data/
+│   ├── queries.tsv         # 20 evaluation queries
+│   ├── information_needs.md # Query descriptions and relevance scale
+│   ├── qrels.txt           # Merged relevance judgments (TREC format)
+│   ├── aaron_overlap.txt   # Aaron's overlap judgments (for kappa)
+│   └── shannon_overlap.txt # Shannon's overlap judgments (for kappa)
+├── results/                # TREC-format run files (generated by evaluate)
+├── docs/                   # Proposal and notes
+├── requirements.txt        # nltk, numpy, pandas
+└── README.md
+```
+
+## Corpus
+
+English Wikipedia (wiki2022 dataset), provided for CIS 439 Checkpoints 1 and 2.
+Full dumps available at: https://dumps.wikimedia.org/enwiki/
+
+## Individual Responsibilities
+
+- **Aaron Chismar:** Implemented preprocessing, indexing, BM25, PRF, and evaluation
+  modules. Set up project repository. Authored queries Q01-Q09. Judged relevance
+  for Q01-Q09 and overlap queries Q10, Q11, Q15, Q16, Q17.
+- **Shannon A. Mendonca:** Drafted the project report. Authored queries Q12-Q20.
+  Judged relevance for Q12-Q20 and overlap queries Q10, Q11, Q15, Q16, Q17.
+- **Both:** Evaluation design, query set review, report revision.
+
+## Relevant Syllabus Sections
+
+- Lexical analysis, parsing, and stemming (Checkpoint 1)
+- Inverted index construction (Checkpoint 2)
+- Vector-space model and TF-IDF weighting
+- Probabilistic retrieval and BM25
+- Query expansion and relevance feedback
+- Evaluation of IR systems (precision, recall, MAP, nDCG)
