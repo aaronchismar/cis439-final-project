@@ -1,4 +1,4 @@
-# CIS 439 Final Project: Query Expansion with Pseudo-Relevance Feedback
+# CIS 439/536 Final Project: Query Expansion with Pseudo-Relevance Feedback
 
 A BM25 retrieval system over the wiki2022 corpus, extended with pseudo-relevance
 feedback (PRF) for automatic query expansion. Built for CIS 439/536.
@@ -98,7 +98,7 @@ cis439-final-project/
 
 ## Corpus
 
-English Wikipedia (wiki2022 dataset), provided for CIS 439 Checkpoints 1 and 2.
+English Wikipedia (wiki2022 dataset), provided for CIS 439/536 Checkpoints 1 and 2.
 Full dumps available at: https://dumps.wikimedia.org/enwiki/
 
 ## Individual Responsibilities
